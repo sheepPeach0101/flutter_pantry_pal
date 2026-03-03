@@ -1,0 +1,11 @@
+Analyzing flutter_pantry_pal...                                 
+
+   info - Instances of 'Color' should be created using an 8-digit hexadecimal integer (such as '0xFFFFFFFF') - lib\theme\dark.dart:5:44 - use_full_hex_values_for_flutter_colors
+   info - The constant name 'radius_lg' isn't a lowerCamelCase identifier - lib\theme\index.dart:7:23 - constant_identifier_names
+   info - The constant name 'spacing_base' isn't a lowerCamelCase identifier - lib\theme\index.dart:8:23 - constant_identifier_names
+   info - Instances of 'Color' should be created using an 8-digit hexadecimal integer (such as '0xFFFFFFFF') - lib\theme\light.dart:5:44 - use_full_hex_values_for_flutter_colors
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\stats.dart:162:49 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\welcome.dart:32:45 - deprecated_member_use
+   info - The package name 'PantryPal' isn't a lower_case_with_underscores identifier - pubspec.yaml:1:7 - package_names
+
+7 issues found. (ran in 2.7s)
