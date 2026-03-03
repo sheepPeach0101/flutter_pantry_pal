@@ -2,8 +2,8 @@ import 'package:PantryPal/theme/index.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class SignupPage extends StatelessWidget {
-  const SignupPage({super.key});
+class LoginPage extends StatelessWidget {
+  const LoginPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +16,7 @@ class SignupPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(height: 48),
-              // Signup Icon Placeholder
+              // Login Icon Placeholder
               Container(
                 width: 120,
                 height: 120,
@@ -24,14 +24,14 @@ class SignupPage extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  Icons.qr_code_scanner_rounded,
+                  Icons.login_rounded,
                   size: 80,
                   color: AppTheme.currentColors.ih_text_muted,
                 ),
               ),
               const SizedBox(height: 24),
               Text(
-                "PantryPal",
+                "Welcome Back",
                 style: GoogleFonts.ibmPlexSans(
                   fontSize: 28,
                   fontWeight: FontWeight.w600,
@@ -40,7 +40,7 @@ class SignupPage extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                "Join us to manage your pantry",
+                "Login to manage your pantry",
                 style: GoogleFonts.ibmPlexSans(
                   fontSize: 14,
                   fontWeight: FontWeight.normal,
@@ -115,7 +115,7 @@ class SignupPage extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      child: const Text("Sign up"),
+                      child: const Text("Log in"),
                     ),
                   ),
                 ],
@@ -125,7 +125,7 @@ class SignupPage extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    "Already a member? ",
+                    "Don't have an account? ",
                     style: GoogleFonts.inter(
                       fontSize: 13,
                       color: AppTheme.currentColors.ih_text_secondary,
@@ -133,10 +133,10 @@ class SignupPage extends StatelessWidget {
                   ),
                   GestureDetector(
                     onTap: () {
-                      Navigator.pushNamed(context, '/login');
+                      Navigator.pushNamed(context, '/signup');
                     },
                     child: Text(
-                      "Log in",
+                      "Sign up",
                       style: GoogleFonts.inter(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,

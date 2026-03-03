@@ -16,7 +16,7 @@ class ProfilePage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(height: 24),
-              _buildHeader(),
+              _buildHeader(context),
               const SizedBox(height: 48),
               _buildAvatar(),
               const SizedBox(height: 16),
@@ -24,7 +24,7 @@ class ProfilePage extends StatelessWidget {
               const SizedBox(height: 32),
               _buildDetails(),
               const SizedBox(height: 32),
-              _buildActions(),
+              _buildActions(context),
               const SizedBox(height: 100), // Bottom padding for footer
             ],
           ),
@@ -33,14 +33,21 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Icon(
-          Icons.arrow_back_rounded,
-          color: AppTheme.currentColors.ih_text,
-          size: 24,
+        GestureDetector(
+          onTap: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            }
+          },
+          child: Icon(
+            Icons.arrow_back_rounded,
+            color: AppTheme.currentColors.ih_text,
+            size: 24,
+          ),
         ),
         Text(
           "Profile Settings",
@@ -146,33 +153,42 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildActions() {
+  Widget _buildActions(BuildContext context) {
     return Column(
       children: [
-        _buildActionButton("Edit"),
+        _buildActionButton(context, "Edit"),
         const SizedBox(height: 16),
-        _buildActionButton("Preferences"),
+        _buildActionButton(context, "Preferences"),
         const SizedBox(height: 16),
-        _buildActionButton("Logout"),
+        _buildActionButton(context, "Logout", isLogout: true),
       ],
     );
   }
 
-  Widget _buildActionButton(String label) {
-    return Container(
-      width: double.infinity,
-      height: 48,
-      decoration: BoxDecoration(
-        color: AppTheme.currentColors.ih_surface_warm,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Center(
-        child: Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: AppTheme.currentColors.ih_text,
+  Widget _buildActionButton(BuildContext context, String label,
+      {bool isLogout = false}) {
+    return GestureDetector(
+      onTap: () {
+        if (isLogout) {
+          Navigator.pushNamedAndRemoveUntil(
+              context, '/welcome', (route) => false);
+        }
+      },
+      child: Container(
+        width: double.infinity,
+        height: 48,
+        decoration: BoxDecoration(
+          color: AppTheme.currentColors.ih_surface_warm,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: AppTheme.currentColors.ih_text,
+            ),
           ),
         ),
       ),

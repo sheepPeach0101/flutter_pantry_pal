@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:PantryPal/theme/index.dart';
 import 'package:PantryPal/views/welcome.dart';
 import 'package:PantryPal/views/signup.dart';
+import 'package:PantryPal/views/login.dart';
 import 'package:PantryPal/views/navigation_wrapper.dart';
 
 void main() {
@@ -21,6 +22,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/welcome': (context) => const WelcomePage(),
         '/signup': (context) => const SignupPage(),
+        '/login': (context) => const LoginPage(),
         '/home': (context) => const MainNavigation(),
       },
     );

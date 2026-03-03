@@ -1,4 +1,5 @@
 import 'package:PantryPal/theme/index.dart';
+import 'package:PantryPal/views/navigation_wrapper.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -22,7 +23,7 @@ class HomePage extends StatelessWidget {
               const SizedBox(height: 12),
               _buildOverviewRow(),
               const SizedBox(height: 32),
-              _buildManageCard(),
+              _buildManageCard(context),
               const SizedBox(height: 32),
               _buildSectionTitle("Suggested recipes"),
               const SizedBox(height: 12),
@@ -130,7 +131,7 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildManageCard() {
+  Widget _buildManageCard(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -173,7 +174,14 @@ class HomePage extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () {},
+              onPressed: () {
+                showModalBottomSheet(
+                  context: context,
+                  backgroundColor: Colors.transparent,
+                  isScrollControlled: true,
+                  builder: (context) => const AddItemModal(),
+                );
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.currentColors.ih_accent,
                 foregroundColor: Colors.white,

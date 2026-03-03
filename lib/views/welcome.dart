@@ -54,7 +54,7 @@ class _WelcomePageState extends State<WelcomePage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  "Your Smart Pantry",
+                  "您的智能厨房管家",
                   style: GoogleFonts.ibmPlexSans(
                     fontSize: 16,
                     fontWeight: FontWeight.normal,
@@ -77,6 +77,20 @@ class _WelcomePageState extends State<WelcomePage> {
                       Icons.arrow_forward_rounded,
                       color: Colors.white,
                       size: 24,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.pushNamed(context, '/login');
+                  },
+                  child: Text(
+                    "已有账号？去登录",
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.currentColors.ih_text_secondary,
                     ),
                   ),
                 ),
