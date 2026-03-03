@@ -129,7 +129,7 @@ class AddItemModal extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                "New Item Entry",
+                "新增物品录入",
                 style: GoogleFonts.ibmPlexSans(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -162,7 +162,7 @@ class AddItemModal extends StatelessWidget {
                 elevation: 0,
               ),
               child: Text(
-                "Add",
+                "添加",
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -180,7 +180,7 @@ class AddItemModal extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Expiration date",
+          "有效期",
           style: GoogleFonts.inter(
             fontSize: 13,
             fontWeight: FontWeight.w600,
@@ -197,7 +197,7 @@ class AddItemModal extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Text(
-              "Select date",
+              "选择日期",
               style: GoogleFonts.inter(
                 fontSize: 13,
                 color: AppTheme.currentColors.ih_text_muted,
@@ -227,7 +227,7 @@ class AddItemModal extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                "Enter pantry item",
+                "输入物品信息",
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -237,11 +237,11 @@ class AddItemModal extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          _buildInput("Item name"),
+          _buildInput("物品名称"),
           const SizedBox(height: 12),
-          _buildInput("Quantity"),
+          _buildInput("数量"),
           const SizedBox(height: 12),
-          _buildInput("Notes"),
+          _buildInput("备注"),
         ],
       ),
     );

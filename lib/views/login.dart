@@ -31,7 +31,7 @@ class LoginPage extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               Text(
-                "Welcome Back",
+                "欢迎回来",
                 style: GoogleFonts.ibmPlexSans(
                   fontSize: 28,
                   fontWeight: FontWeight.w600,
@@ -40,7 +40,7 @@ class LoginPage extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                "Login to manage your pantry",
+                "登录以管理您的厨房",
                 style: GoogleFonts.ibmPlexSans(
                   fontSize: 14,
                   fontWeight: FontWeight.normal,
@@ -53,7 +53,7 @@ class LoginPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Email *",
+                    "邮箱 *",
                     style: GoogleFonts.inter(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -76,7 +76,7 @@ class LoginPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    "Password *",
+                    "密码 *",
                     style: GoogleFonts.inter(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -115,7 +115,7 @@ class LoginPage extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      child: const Text("Log in"),
+                      child: const Text("登录"),
                     ),
                   ),
                 ],
@@ -125,7 +125,7 @@ class LoginPage extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    "Don't have an account? ",
+                    "还没有账号？ ",
                     style: GoogleFonts.inter(
                       fontSize: 13,
                       color: AppTheme.currentColors.ih_text_secondary,
@@ -136,7 +136,7 @@ class LoginPage extends StatelessWidget {
                       Navigator.pushNamed(context, '/signup');
                     },
                     child: Text(
-                      "Sign up",
+                      "去注册",
                       style: GoogleFonts.inter(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,

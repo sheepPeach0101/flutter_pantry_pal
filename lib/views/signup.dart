@@ -40,7 +40,7 @@ class SignupPage extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                "Join us to manage your pantry",
+                "加入我们，轻松管理您的厨房",
                 style: GoogleFonts.ibmPlexSans(
                   fontSize: 14,
                   fontWeight: FontWeight.normal,
@@ -53,7 +53,7 @@ class SignupPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Email *",
+                    "邮箱 *",
                     style: GoogleFonts.inter(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -76,7 +76,7 @@ class SignupPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    "Password *",
+                    "密码 *",
                     style: GoogleFonts.inter(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -115,7 +115,7 @@ class SignupPage extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      child: const Text("Sign up"),
+                      child: const Text("注册"),
                     ),
                   ),
                 ],
@@ -125,7 +125,7 @@ class SignupPage extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    "Already a member? ",
+                    "已有账号？ ",
                     style: GoogleFonts.inter(
                       fontSize: 13,
                       color: AppTheme.currentColors.ih_text_secondary,
@@ -136,7 +136,7 @@ class SignupPage extends StatelessWidget {
                       Navigator.pushNamed(context, '/login');
                     },
                     child: Text(
-                      "Log in",
+                      "去登录",
                       style: GoogleFonts.inter(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,

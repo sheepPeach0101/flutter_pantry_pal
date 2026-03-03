@@ -50,7 +50,7 @@ class ProfilePage extends StatelessWidget {
           ),
         ),
         Text(
-          "Profile Settings",
+          "个人中心",
           style: GoogleFonts.ibmPlexSans(
             fontSize: 18,
             fontWeight: FontWeight.w600,
@@ -97,7 +97,7 @@ class ProfilePage extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          "• Managing",
+          "• 总监",
           style: GoogleFonts.inter(
             fontSize: 13,
             color: AppTheme.currentColors.ih_text_secondary,
@@ -116,13 +116,13 @@ class ProfilePage extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _buildDetailRow("Role", "Pantry Manager"),
+          _buildDetailRow("职位", "厨房管家"),
           const SizedBox(height: 12),
-          _buildDetailRow("Email", "alex@pantrypal.com", isAccent: true),
+          _buildDetailRow("邮箱", "alex@pantrypal.com", isAccent: true),
           const SizedBox(height: 12),
-          _buildDetailRow("Mobile", "N/A"),
+          _buildDetailRow("手机", "未填写"),
           const SizedBox(height: 12),
-          _buildDetailRow("Last login", "2026-02-04 15:45"),
+          _buildDetailRow("最后登录", "2026-02-04 15:45"),
         ],
       ),
     );
@@ -156,11 +156,11 @@ class ProfilePage extends StatelessWidget {
   Widget _buildActions(BuildContext context) {
     return Column(
       children: [
-        _buildActionButton(context, "Edit"),
+        _buildActionButton(context, "编辑资料"),
         const SizedBox(height: 16),
-        _buildActionButton(context, "Preferences"),
+        _buildActionButton(context, "偏好设置"),
         const SizedBox(height: 16),
-        _buildActionButton(context, "Logout", isLogout: true),
+        _buildActionButton(context, "退出登录", isLogout: true),
       ],
     );
   }

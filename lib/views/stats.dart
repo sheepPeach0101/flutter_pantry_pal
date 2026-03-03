@@ -38,7 +38,7 @@ class StatsPage extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          "Pantry Statistics",
+          "厨房统计",
           style: GoogleFonts.ibmPlexSans(
             fontSize: 20,
             fontWeight: FontWeight.w600,
@@ -56,7 +56,7 @@ class StatsPage extends StatelessWidget {
 
   Widget _buildFilter() {
     return Text(
-      "Last 30 days ▼",
+      "最近 30 天 ▼",
       style: GoogleFonts.ibmPlexSans(
         fontSize: 13,
         color: AppTheme.currentColors.ih_text_secondary,
@@ -76,7 +76,7 @@ class StatsPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Monthly overview",
+            "月度概览",
             style: GoogleFonts.ibmPlexSans(
               fontSize: 13,
               color: AppTheme.currentColors.ih_text_secondary,
@@ -147,7 +147,7 @@ class StatsPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Items used in the last month",
+            "上月使用的物品",
             style: GoogleFonts.ibmPlexSans(
               fontSize: 16,
               fontWeight: FontWeight.w700,
@@ -161,7 +161,7 @@ class StatsPage extends StatelessWidget {
             width: double.infinity,
             color: AppTheme.currentColors.ih_bg.withOpacity(0.5),
             child: const Center(
-              child: Text("Chart Placeholder"),
+              child: Text("图表占位符"),
             ),
           ),
           const SizedBox(height: 12),
@@ -171,14 +171,14 @@ class StatsPage extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                "8 items",
+                "8 件物品",
                 style: GoogleFonts.inter(
                   fontSize: 11,
                   color: AppTheme.currentColors.ih_text_muted,
                 ),
               ),
               Text(
-                "15 recipes",
+                "15 个菜谱",
                 style: GoogleFonts.inter(
                   fontSize: 11,
                   color: AppTheme.currentColors.ih_text_muted,
@@ -192,7 +192,7 @@ class StatsPage extends StatelessWidget {
   }
 
   Widget _buildDayLabels() {
-    final days = ["M", "T", "W", "T", "F", "S", "S"];
+    final days = ["一", "二", "三", "四", "五", "六", "日"];
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: days.map((day) {
@@ -222,7 +222,7 @@ class StatsPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Top 3 used items",
+            "前三位常用物品",
             style: GoogleFonts.ibmPlexSans(
               fontSize: 14,
               fontWeight: FontWeight.w600,
@@ -233,9 +233,9 @@ class StatsPage extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildTopUsedItem(Icons.restaurant_rounded, "Apples"),
-              _buildTopUsedItem(Icons.grain_rounded, "Rice"),
-              _buildTopUsedItem(Icons.spa_rounded, "Carrots"),
+              _buildTopUsedItem(Icons.restaurant_rounded, "苹果"),
+              _buildTopUsedItem(Icons.grain_rounded, "米饭"),
+              _buildTopUsedItem(Icons.spa_rounded, "胡萝卜"),
             ],
           ),
         ],

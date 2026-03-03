@@ -19,7 +19,7 @@ class HomePage extends StatelessWidget {
               const SizedBox(height: 24),
               _buildHeader(),
               const SizedBox(height: 32),
-              _buildSectionTitle("Your pantry overview"),
+              _buildSectionTitle("您的厨房概览"),
               const SizedBox(height: 12),
               _buildOverviewRow(),
               const SizedBox(height: 32),
@@ -29,7 +29,7 @@ class HomePage extends StatelessWidget {
               const SizedBox(height: 12),
               _buildRecipeCard(),
               const SizedBox(height: 32),
-              _buildSectionTitle("Usage statistics"),
+              _buildSectionTitle("使用统计"),
               const SizedBox(height: 12),
               _buildUsageStats(),
               const SizedBox(height: 32),
@@ -60,7 +60,7 @@ class HomePage extends StatelessWidget {
               ),
             ),
             Text(
-              "Items in stock: 120",
+              "库存总量: 120",
               style: GoogleFonts.ibmPlexSans(
                 fontSize: 13,
                 color: AppTheme.currentColors.ih_text_secondary,
@@ -89,14 +89,13 @@ class HomePage extends StatelessWidget {
   }
 
   Widget _buildOverviewRow() {
-    return Row(
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
       children: [
         _buildOverviewItem(AppTheme.currentColors.ih_surface),
-        const SizedBox(width: 12),
         _buildOverviewItem(AppTheme.currentColors.ih_surface),
-        const SizedBox(width: 12),
         _buildOverviewItem(AppTheme.currentColors.ih_surface),
-        const SizedBox(width: 12),
         _buildOverviewAddButton(),
       ],
     );
@@ -152,7 +151,7 @@ class HomePage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Manage your pantry",
+                    "管理您的厨房",
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -160,7 +159,7 @@ class HomePage extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    "Track items and usage",
+                    "追踪物品和使用情况",
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       color: AppTheme.currentColors.ih_text_secondary,
@@ -192,7 +191,7 @@ class HomePage extends StatelessWidget {
                 elevation: 0,
               ),
               child: Text(
-                "Add item",
+                "添加物品",
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -235,7 +234,7 @@ class HomePage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Pasta Primavera",
+                    "春天面条",
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -243,7 +242,7 @@ class HomePage extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    "Based on inventory",
+                    "根据库存推荐",
                     style: GoogleFonts.inter(
                       fontSize: 11,
                       color: AppTheme.currentColors.ih_text_secondary,
@@ -254,7 +253,7 @@ class HomePage extends StatelessWidget {
             ],
           ),
           Text(
-            "View recipe",
+            "查看菜谱",
             style: GoogleFonts.inter(
               fontSize: 13,
               fontWeight: FontWeight.w600,
@@ -272,18 +271,18 @@ class HomePage extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildStatBubble("Items used", "50", "80% used"),
+            _buildStatBubble("已使用物品", "50", "80% 已用"),
             const SizedBox(width: 12),
-            _buildStatBubble("Wasted", "12", "5% increase"),
+            _buildStatBubble("损耗", "12", "增长 5%"),
           ],
         ),
         const SizedBox(height: 12),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildStatBubble("Stock value", "\$450", "Total stock"),
+            _buildStatBubble("库存价值", "\$450", "总价值"),
             const SizedBox(width: 12),
-            _buildStatBubble("Avg lifespan", "14d", "+2d improvement"),
+            _buildStatBubble("平均有效期", "14天", "改善 2天"),
           ],
         ),
       ],
@@ -333,7 +332,7 @@ class HomePage extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          "Top items used",
+          "常用物品",
           style: GoogleFonts.ibmPlexSans(
             fontSize: 14,
             fontWeight: FontWeight.w600,
@@ -341,7 +340,7 @@ class HomePage extends StatelessWidget {
           ),
         ),
         Text(
-          "VIEW ALL",
+          "查看全部",
           style: GoogleFonts.inter(
             fontSize: 11,
             fontWeight: FontWeight.w600,
@@ -355,10 +354,10 @@ class HomePage extends StatelessWidget {
   Widget _buildTopItemsList() {
     return Column(
       children: [
-        _buildTopItemTile("Apples", "50 uses"),
-        _buildTopItemTile("Milk", "30 uses"),
-        _buildTopItemTile("Eggs", "25 uses"),
-        _buildTopItemTile("Bread", "20 uses"),
+        _buildTopItemTile("苹果", "50 次使用"),
+        _buildTopItemTile("牛奶", "30 次使用"),
+        _buildTopItemTile("鸡蛋", "25 次使用"),
+        _buildTopItemTile("面包", "20 次使用"),
       ],
     );
   }

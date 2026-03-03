@@ -18,16 +18,15 @@ class InventoryPage extends StatelessWidget {
               const SizedBox(height: 24),
               _buildHeader(),
               const SizedBox(height: 32),
-              _buildSectionTitle("STOCK STATUS"),
+              _buildSectionTitle("库存状态"),
               const SizedBox(height: 12),
               _buildStockStatusList(),
               const SizedBox(height: 32),
-              _buildSectionTitle("RECIPE SUGGESTIONS"),
+              _buildSectionTitle("推荐菜谱"),
               const SizedBox(height: 12),
-              _buildRecipeCard(
-                  "Pasta Primavera", "Based on available ingredients"),
+              _buildRecipeCard("春天面条", "基于现有食材推荐"),
               const SizedBox(height: 12),
-              _buildRecipeCard("Chicken Stir Fry", "Requires 2 more items"),
+              _buildRecipeCard("小炒鸡", "还需要 2 种食材"),
               const SizedBox(height: 100), // Bottom padding for footer
             ],
           ),
@@ -41,7 +40,7 @@ class InventoryPage extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          "Pantry Items",
+          "厨房物品",
           style: GoogleFonts.ibmPlexSans(
             fontSize: 20,
             fontWeight: FontWeight.w600,
@@ -71,11 +70,11 @@ class InventoryPage extends StatelessWidget {
   Widget _buildStockStatusList() {
     return Column(
       children: [
-        _buildStockItem("Apples", "10 units", "Expiring soon"),
+        _buildStockItem("苹果", "10 个", "即将过期"),
         const SizedBox(height: 12),
-        _buildStockItem("Milk", "2 liters", "Fresh"),
+        _buildStockItem("牛奶", "2 升", "新鲜"),
         const SizedBox(height: 12),
-        _buildStockItem("Eggs", "12 items", "Expiring in 5 days"),
+        _buildStockItem("鸡蛋", "12 个", "5 天后过期"),
       ],
     );
   }
