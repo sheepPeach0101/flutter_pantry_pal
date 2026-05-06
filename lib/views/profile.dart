@@ -37,18 +37,7 @@ class ProfilePage extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        GestureDetector(
-          onTap: () {
-            if (Navigator.canPop(context)) {
-              Navigator.pop(context);
-            }
-          },
-          child: Icon(
-            Icons.arrow_back_rounded,
-            color: AppTheme.currentColors.ih_text,
-            size: 24,
-          ),
-        ),
+        const SizedBox(width: 24), // Placeholder to keep title centered
         Text(
           "个人中心",
           style: GoogleFonts.ibmPlexSans(
