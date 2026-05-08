@@ -1,9 +1,64 @@
 import 'package:PantryPal/theme/index.dart';
+import 'package:PantryPal/services/auth_service.dart';
+import 'package:PantryPal/utils/auth_notifier.dart';
+import 'package:PantryPal/utils/exceptions.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class LoginPage extends StatelessWidget {
+class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
+
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _authService = AuthService();
+
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleLogin() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (email.isEmpty || password.isEmpty) {
+      setState(() => _errorMessage = '请填写邮箱和密码');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final authData = await _authService.login(email, password);
+      await AuthNotifier.instance.login(authData);
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/home');
+      }
+    } on ApiException catch (e) {
+      setState(() => _errorMessage = e.message);
+    } on NetworkException catch (e) {
+      setState(() => _errorMessage = e.message);
+    } catch (_) {
+      setState(() => _errorMessage = '登录失败，请稍后重试');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,13 +71,10 @@ class LoginPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(height: 48),
-              // Login Icon Placeholder
               Container(
                 width: 120,
                 height: 120,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                ),
+                decoration: const BoxDecoration(shape: BoxShape.circle),
                 child: Icon(
                   Icons.login_rounded,
                   size: 80,
@@ -43,12 +95,30 @@ class LoginPage extends StatelessWidget {
                 "登录以管理您的厨房",
                 style: GoogleFonts.ibmPlexSans(
                   fontSize: 14,
-                  fontWeight: FontWeight.normal,
                   color: AppTheme.currentColors.ih_text_secondary,
                 ),
               ),
               const SizedBox(height: 48),
-              // Form Fields
+              // 错误提示
+              if (_errorMessage != null) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    _errorMessage!,
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: Colors.red.shade700,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+              // 表单
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -62,6 +132,8 @@ class LoginPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   TextField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
                     decoration: InputDecoration(
                       hintText: "user@email.com",
                       hintStyle: GoogleFonts.inter(
@@ -85,6 +157,7 @@ class LoginPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   TextField(
+                    controller: _passwordController,
                     obscureText: true,
                     decoration: InputDecoration(
                       hintText: "••••••••",
@@ -102,11 +175,10 @@ class LoginPage extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pushReplacementNamed(context, '/home');
-                      },
+                      onPressed: _isLoading ? null : _handleLogin,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.currentColors.ih_surface_warm,
+                        backgroundColor:
+                            AppTheme.currentColors.ih_surface_warm,
                         foregroundColor: AppTheme.currentColors.ih_text,
                         elevation: 0,
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -115,7 +187,13 @@ class LoginPage extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      child: const Text("登录"),
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text("登录"),
                     ),
                   ),
                 ],
@@ -132,9 +210,7 @@ class LoginPage extends StatelessWidget {
                     ),
                   ),
                   GestureDetector(
-                    onTap: () {
-                      Navigator.pushNamed(context, '/signup');
-                    },
+                    onTap: () => Navigator.pushNamed(context, '/signup'),
                     child: Text(
                       "去注册",
                       style: GoogleFonts.inter(
@@ -145,7 +221,7 @@ class LoginPage extends StatelessWidget {
                     ),
                   ),
                 ],
-              )
+              ),
             ],
           ),
         ),
