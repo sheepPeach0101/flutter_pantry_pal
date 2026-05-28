@@ -6,6 +6,9 @@ import 'package:PantryPal/services/pantry_service.dart';
 import 'package:PantryPal/services/recipe_service.dart';
 import 'package:PantryPal/utils/auth_notifier.dart';
 import 'package:PantryPal/utils/exceptions.dart';
+import 'package:PantryPal/widgets/edit_item_modal.dart';
+import 'package:PantryPal/widgets/item_action_sheet.dart';
+import 'package:PantryPal/widgets/use_item_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -66,6 +69,13 @@ class _InventoryPageState extends State<InventoryPage> {
         Navigator.pushNamedAndRemoveUntil(
             context, '/welcome', (route) => false);
       }
+    } on ApiException catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.message;
+          _isLoading = false;
+        });
+      }
     } on NetworkException catch (e) {
       if (mounted) {
         setState(() {
@@ -73,29 +83,64 @@ class _InventoryPageState extends State<InventoryPage> {
           _isLoading = false;
         });
       }
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = '加载失败，请稍后重试';
-          _isLoading = false;
-        });
-      }
     }
   }
 
-  Future<void> _deleteItem(PantryItem item) async {
+  Future<void> _showActionSheet(PantryItem item) async {
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ItemActionSheet(item: item),
+    );
+
+    if (!mounted) return;
+    if (action == 'edit') {
+      await _showEditModal(item);
+    } else if (action == 'use') {
+      await _showUseDialog(item);
+    } else if (action == 'delete') {
+      await _confirmAndDelete(item);
+    }
+  }
+
+  Future<void> _showEditModal(PantryItem item) async {
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => EditItemModal(item: item),
+    );
+    if (result == true && mounted) {
+      await _loadData();
+    }
+  }
+
+  Future<void> _showUseDialog(PantryItem item) async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => UseItemDialog(item: item),
+    );
+    if (result == true && mounted) {
+      await _loadData();
+    }
+  }
+
+  Future<void> _confirmAndDelete(PantryItem item) async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         title: const Text('确认删除'),
-        content: Text('确定要删除"${item.name}"吗？'),
+        content: Text('确定要删除"${item.name}"吗？此操作不可恢复。'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('取消')),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
           TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('删除', style: TextStyle(color: Colors.red))),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('删除', style: TextStyle(color: Colors.red)),
+          ),
         ],
       ),
     );
@@ -107,8 +152,13 @@ class _InventoryPageState extends State<InventoryPage> {
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(const SnackBar(content: Text('删除成功')));
-        _loadData();
+        await _loadData();
       }
+    } on UnauthorizedException {
+      if (!mounted) return;
+      await AuthNotifier.instance.clearAuth();
+      if (!mounted) return;
+      Navigator.pushNamedAndRemoveUntil(context, '/welcome', (route) => false);
     } on ApiException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -280,51 +330,44 @@ class _InventoryPageState extends State<InventoryPage> {
   }
 
   Widget _buildStockItem(PantryItem item) {
-    return Dismissible(
-      key: Key(item.id),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 16),
-        decoration: BoxDecoration(
-          color: Colors.red.shade400,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: const Icon(Icons.delete, color: Colors.white),
-      ),
-      confirmDismiss: (_) async {
-        await _deleteItem(item);
-        return false; // _loadData handles refresh
-      },
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppTheme.currentColors.ih_surface,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(item.name,
+    return Material(
+      color: AppTheme.currentColors.ih_surface,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: () => _showActionSheet(item),
+        borderRadius: BorderRadius.circular(16),
+        splashColor: AppTheme.currentColors.ih_accent.withValues(alpha: 0.08),
+        highlightColor: AppTheme.currentColors.ih_surface_warm,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.name,
                       style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.currentColors.ih_text)),
-                  Text(
-                    "${item.quantity} ${item.unit} • ${item.statusLabel}",
-                    style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.currentColors.ih_text,
+                      ),
+                    ),
+                    Text(
+                      "${item.quantity} ${item.unit} • ${item.statusLabel}",
+                      style: GoogleFonts.inter(
                         fontSize: 12,
-                        color: AppTheme.currentColors.ih_text_secondary),
-                  ),
-                ],
+                        color: AppTheme.currentColors.ih_text_secondary,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            _buildStatusBadge(item.status),
-          ],
+              _buildStatusBadge(item.status),
+            ],
+          ),
         ),
       ),
     );

@@ -1,5 +1,6 @@
-import 'package:PantryPal/models/pantry_item.dart';
 import 'package:PantryPal/models/api_response.dart';
+import 'package:PantryPal/models/pantry_item.dart';
+import 'package:PantryPal/models/usage_log.dart';
 import 'package:PantryPal/services/api_client.dart';
 
 /// 厨房物品服务（CRUD + 概览）
@@ -75,5 +76,38 @@ class PantryService {
   /// 删除物品
   Future<void> deleteItem(String itemId) async {
     await _client.delete('/api/pantry/items/$itemId');
+  }
+
+  /// 使用食材，扣减库存并写入使用记录
+  ///
+  /// 返回响应中的 data 字段（包含 item 和 usage_log）。
+  Future<Map<String, dynamic>> useItem(
+    String itemId, {
+    required int quantity,
+  }) async {
+    final response = await _client.post(
+      '/api/pantry/items/$itemId/use',
+      body: {'quantity': quantity},
+    );
+    return response['data'] as Map<String, dynamic>;
+  }
+
+  /// 获取食材使用记录（分页 + 时间范围）
+  ///
+  /// 返回响应中的 data 字段（包含 items、total、page、page_size）。
+  Future<PaginatedData<UsageLog>> getUsageLogs({
+    int page = 1,
+    int pageSize = 20,
+    int days = 30,
+  }) async {
+    final params = <String, String>{
+      'page': page.toString(),
+      'page_size': pageSize.toString(),
+      'days': days.toString(),
+    };
+    final response =
+        await _client.get('/api/pantry/usage-logs', queryParams: params);
+    final data = response['data'] as Map<String, dynamic>;
+    return PaginatedData.fromJson(data, UsageLog.fromJson);
   }
 }

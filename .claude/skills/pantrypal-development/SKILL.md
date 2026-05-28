@@ -65,6 +65,9 @@ lib/
 │   ├── exceptions.dart            # ApiException、NetworkException、UnauthorizedException
 │   ├── token_manager.dart         # JWT token SharedPreferences 封装（单例）
 │   └── auth_notifier.dart         # 登录态 ChangeNotifier（单例）
+├── widgets/                       # 跨页面复用组件（2026-05-26 新建）
+│   ├── edit_item_modal.dart       # 食材编辑弹窗（预填字段 + updateItem）
+│   └── item_action_sheet.dart     # 食材操作面板（编辑/使用占位/删除）
 └── views/                         # 视图层
     ├── welcome.dart               # 欢迎页（初始路由 /welcome）
     ├── signup.dart                # 注册页（/signup）
@@ -234,6 +237,18 @@ PaginatedData<PantryItem> paged = PaginatedData.fromJson(json, (item) => PantryI
 // paged.limit — 每页数量
 ```
 
+### UsageLog（`lib/models/usage_log.dart`）
+
+```dart
+UsageLog log = UsageLog.fromJson(json);
+// log.id — 使用记录 UUID
+// log.itemId — 关联物品 UUID（物品被删除后为 null）
+// log.itemName — 物品名称（冗余存储）
+// log.quantity — 本次使用数量
+// log.unit — 单位（冗余存储）
+// log.usedAt — 使用时间（DateTime）
+```
+
 ### PantryItem（`lib/models/pantry_item.dart`）
 
 ```dart
@@ -283,6 +298,13 @@ await PantryService.updateItem(id: item.id, name: '番茄', quantity: 5);
 
 // 删除物品
 await PantryService.deleteItem(id: item.id);
+
+// 使用食材（返回含 item 和 usage_log 的 Map）
+final data = await _pantryService.useItem(item.id, quantity: 3);
+
+// 获取使用记录（返回 PaginatedData<UsageLog>）
+final paged = await _pantryService.getUsageLogs(page: 1, pageSize: 20, days: 30);
+final logs = paged.items; // List<UsageLog>
 ```
 
 ### StatsService / RecipeService
@@ -397,24 +419,83 @@ messenger.showSnackBar(        // 再 show
 );
 ```
 
-### 删除操作（Dismissible）
+### 卡片点击触发 ActionSheet（InventoryPage 模式）
 
-InventoryPage 使用 `Dismissible` 实现左滑删除：
+InventoryPage 的食材卡片点击后弹出 `ItemActionSheet`，删除逻辑完全迁移到操作面板。
+**Dismissible 已移除**，由 `InkWell` + 操作面板两步确认替代。
 
 ```dart
-Dismissible(
-  key: Key(item.id.toString()),
-  direction: DismissDirection.endToStart,
-  onDismissed: (_) async {
-    try {
-      await PantryService.deleteItem(id: item.id);
-    } on NetworkException {
-      // 处理网络异常
-    }
-  },
-  child: ItemCard(item: item),
-)
+// _buildStockItem：用 Material + InkWell 包裹卡片，提供 ripple 点击效果
+Widget _buildStockItem(PantryItem item) {
+  return Material(
+    color: AppTheme.currentColors.ih_surface,
+    borderRadius: BorderRadius.circular(16),
+    child: InkWell(
+      onTap: () => _showActionSheet(item),
+      borderRadius: BorderRadius.circular(16),
+      splashColor: AppTheme.currentColors.ih_accent.withValues(alpha: 0.08),
+      highlightColor: AppTheme.currentColors.ih_surface_warm,
+      child: Container(padding: const EdgeInsets.all(16), child: /* ... */),
+    ),
+  );
+}
+
+// _showActionSheet：弹出操作面板，处理返回的操作信号
+Future<void> _showActionSheet(PantryItem item) async {
+  final action = await showModalBottomSheet<String>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (_) => ItemActionSheet(item: item),
+  );
+  if (!mounted) return;
+  if (action == 'edit') {
+    await _showEditModal(item);
+  } else if (action == 'use') {
+    await _showUseDialog(item);
+  } else if (action == 'delete') {
+    await _confirmAndDelete(item);
+  }
+}
+
+// _showUseDialog：在父页面 context 中弹出 UseItemDialog，成功后刷新列表
+Future<void> _showUseDialog(PantryItem item) async {
+  final result = await showDialog<bool>(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => UseItemDialog(item: item),
+  );
+  if (result == true && mounted) {
+    await _loadData();
+  }
+}
+
+// _confirmAndDelete：在父页面 context 中弹确认对话框，再调用删除 API
+Future<void> _confirmAndDelete(PantryItem item) async {
+  final confirm = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('确认删除'),
+      content: Text('确定要删除"\${item.name}"吗？此操作不可恢复。'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+        TextButton(onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('删除', style: TextStyle(color: Colors.red))),
+      ],
+    ),
+  );
+  if (confirm != true) return;
+  await _pantryService.deleteItem(item.id);
+  if (mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('删除成功')));
+    _loadData();
+  }
+}
 ```
+
+**关键点**：
+- 删除确认对话框必须在父页面（InventoryPage）的 context 中弹出，不能在 ActionSheet 内部调用 `showDialog`，否则 ActionSheet 关闭后 context 失效
+- `_showActionSheet` 是 `async`，await ActionSheet 返回值后再检查 `mounted` 和 action 值
+- `InkWell` 必须放在 `Material` 内部才能显示 ripple 效果（否则 ripple 不可见）
 
 ### 401 统一处理模式
 
@@ -477,7 +558,11 @@ if (confirmed == true) { /* 执行退出 */ }
 
 ### InventoryPage
 - 状态筛选 Chip（全部 / 新鲜 / 即将过期 / 已过期）
-- Dismissible 左滑删除
+- 食材卡片点击弹出 ItemActionSheet（编辑 / 使用 / 删除，三项均已激活）
+- 删除：ActionSheet 返回 'delete' 信号 → InventoryPage 弹确认对话框 → 调用删除 API
+- 使用：ActionSheet 返回 'use' 信号 → InventoryPage._showUseDialog → showDialog UseItemDialog（barrierDismissible: false）→ 成功后 _loadData()
+- 编辑：ActionSheet 返回 'edit' 信号 → InventoryPage._showEditModal → showModalBottomSheet EditItemModal
+- Dismissible 已移除（迁移到 ActionSheet 删除流程）
 - 分页加载（PantryService.getItems + status 参数）
 - 推荐菜谱卡片
 - RefreshIndicator
@@ -519,6 +604,8 @@ if (confirmed == true) { /* 执行退出 */ }
 | POST | `/api/pantry/items` | 新增物品 |
 | PUT | `/api/pantry/items/{id}` | 更新物品 |
 | DELETE | `/api/pantry/items/{id}` | 删除物品 |
+| POST | `/api/pantry/items/{id}/use` | 使用食材，扣减库存并写入使用记录 |
+| GET | `/api/pantry/usage-logs` | 获取使用记录（分页 + days 时间范围） |
 
 ### 用户信息
 | 方法 | 路由 | 说明 |
@@ -642,9 +729,91 @@ if (result == true) _loadData();
 - 菜谱详情页（`/recipe-detail`）和编辑个人资料页（`/edit-profile`）尚未实现
 - 偏好设置页面尚未实现
 
+## 可复用组件（lib/widgets/）
+
+本目录在 2026-05-26 新建，用于存放跨页面复用的弹窗和面板组件。
+
+### EditItemModal（`lib/widgets/edit_item_modal.dart`）
+
+编辑食材信息的浮动卡片弹窗，与 AddItemModal 视觉风格完全一致。
+
+```dart
+// 调用方式（InventoryPage 或 ItemActionSheet 之后的父页面）
+final result = await showModalBottomSheet<bool>(
+  context: context,
+  backgroundColor: Colors.transparent,
+  isScrollControlled: true,
+  builder: (_) => EditItemModal(item: item, onRefresh: _loadData),
+);
+if (result == true) _loadData();
+```
+
+关键实现细节：
+- `initState` 中用 `item` 数据初始化所有 TextEditingController
+- 日期 `firstDate: DateTime(2000, 1, 1)`（允许选历史日期，与 AddItemModal 的 `DateTime.now()` 不同）
+- 提交后 `Navigator.pop(context, true)` + SnackBar 显示"修改成功"
+- SnackBar 在 `pop` 之前捕获 `ScaffoldMessenger.of(context)` 引用，避免 context 失效
+- loading 期间禁用所有输入框（`enabled: !_isSubmitting`）
+
+### ItemActionSheet（`lib/widgets/item_action_sheet.dart`）
+
+食材卡片点击后弹出的底部操作面板，提供编辑、使用、删除三个入口（三个入口均已激活）。
+
+```dart
+// 调用方式（InventoryPage 中）
+final action = await showModalBottomSheet<String>(
+  context: context,
+  backgroundColor: Colors.transparent,
+  builder: (_) => ItemActionSheet(item: item),
+);
+if (!mounted) return;
+if (action == 'edit') {
+  await _showEditModal(item);
+} else if (action == 'use') {
+  await _showUseDialog(item);
+} else if (action == 'delete') {
+  await _confirmAndDelete(item);
+}
+```
+
+关键实现细节：
+- 删除：`Navigator.pop(context, 'delete')` 返回信号，由父页面弹确认对话框
+- 编辑：`Navigator.pop(context, 'edit')` 返回信号，由父页面弹出 EditItemModal
+- 使用（已激活）：`Navigator.pop(context, 'use')` 返回信号，由父页面调用 `showDialog` 弹出 UseItemDialog；图标色 `ih_accent`，文字色 `ih_text`，副文字"记录消耗"（11pt, `ih_text_muted`）
+- 构造函数只需 `item` 参数，无 `onRefresh` 回调，所有后续操作由父页面统一处理
+
+### UseItemDialog（`lib/widgets/use_item_dialog.dart`）
+
+使用食材的居中弹窗（Dialog，非 BottomSheet），单字段数量输入，支持步进按钮与输入框双向联动。
+
+```dart
+// 调用方式（InventoryPage._showUseDialog — 在父页面 context 中调用）
+final result = await showDialog<bool>(
+  context: context,
+  barrierDismissible: false,
+  builder: (_) => UseItemDialog(item: item),
+);
+if (result == true && mounted) await _loadData();
+```
+
+关键实现细节：
+- `barrierDismissible: false`：防止误触关闭（输入中）
+- 步进按钮减号：`_quantity <= 1` 时禁用；加号：`_quantity >= item.quantity` 时禁用
+- TextField 与 `_quantity` 状态变量双向联动（listener 监听文本变化，步进按钮更新 controller.text）
+- 校验在"确认使用"点击时触发（非实时），失败显示 ErrorBanner
+- 成功后：先缓存 `ScaffoldMessenger.of(context)` → `Navigator.pop(context, true)` → `messenger.showSnackBar(...)`
+- SnackBar 文案：`'已使用 $qty ${item.unit} ${item.name}'`
+- Loading 期间取消按钮和确认按钮均禁用（防重复提交）
+
 ## 更新记录
 
 | 日期 | 内容 |
 |------|------|
+| 2026-05-27 | ADD: 新增 lib/models/usage_log.dart（UsageLog 数据模型，item_id 可为 null） |
+| 2026-05-27 | ADD: PantryService 新增 useItem() 和 getUsageLogs() 两个方法，对接使用食材与查询使用记录接口 |
+| 2026-05-27 | UPDATE: ItemActionSheet "使用"项从 SnackBar 占位升级为激活状态：图标色改为 ih_accent，文字色改为 ih_text，添加副文字"记录消耗"，点击返回 'use' 信号；InventoryPage._showActionSheet 新增 'use' 分支，调用 _showUseDialog 弹出 UseItemDialog |
+| 2026-05-27 | ADD: 新增 lib/widgets/use_item_dialog.dart（UseItemDialog 居中弹窗，步进按钮+输入框双向联动，loading 防重复提交） |
+| 2026-05-26 | UPDATE: InventoryPage 集成 ItemActionSheet 和 EditItemModal；移除 Dismissible，改为卡片点击 → 操作面板 → 两步确认删除；新增 InkWell+Material 卡片点击模式说明 |
+| 2026-05-26 | ADD: 新建 lib/widgets/ 目录，新增 EditItemModal 和 ItemActionSheet 两个组件 |
 | 2026-05-07 | 前后端 API 对接全量完成：新增 models/services/utils 三层，所有页面接入真实接口，完善异步模式与错误处理规范 |
 | 2026-04-xx | 初始 UI 原型完成（静态硬编码数据） |
