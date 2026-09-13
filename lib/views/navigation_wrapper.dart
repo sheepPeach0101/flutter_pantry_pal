@@ -19,18 +19,51 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = [
-    const HomePage(),
-    const InventoryPage(),
-    const Center(child: Text("Add Placeholder")),
-    const StatsPage(),
-    const ProfilePage(),
-  ];
+  final _homeKey = GlobalKey<HomePageState>();
+  final _inventoryKey = GlobalKey<InventoryPageState>();
+
+  late final List<Widget> _pages;
+
+  @override
+  void initState() {
+    super.initState();
+    _pages = [
+      HomePage(
+        key: _homeKey,
+        onNavigateToInventory: _switchToInventoryWithFilter,
+        onSwitchTab: (index) => setState(() => _currentIndex = index),
+        onSwitchToInventoryWithSearch: _switchToInventoryWithSearch,
+      ),
+      InventoryPage(key: _inventoryKey),
+      const Center(child: Text("Add Placeholder")),
+      const StatsPage(),
+      const ProfilePage(),
+    ];
+  }
+
+  void _switchToInventoryWithFilter(String? filter) {
+    setState(() => _currentIndex = 1);
+    _inventoryKey.currentState?.applyFilter(filter);
+  }
+
+  void _switchToInventoryWithSearch(
+    String keyword, {
+    String? targetItemName,
+  }) {
+    setState(() => _currentIndex = 1);
+    _inventoryKey.currentState
+        ?.applySearch(keyword, autoShowActionSheetForItem: targetItemName);
+  }
 
   void _onTabTapped(int index) {
     if (index == 2) {
       _showAddModal();
     } else {
+      if (index == 0) {
+        _homeKey.currentState?.refresh();
+      } else if (index == 1) {
+        _inventoryKey.currentState?.refresh();
+      }
       setState(() {
         _currentIndex = index;
       });
@@ -45,8 +78,8 @@ class _MainNavigationState extends State<MainNavigation> {
       builder: (context) => const AddItemModal(),
     );
     if (result == true && mounted) {
-      // Force rebuild child pages so they reload data
-      setState(() {});
+      _homeKey.currentState?.refresh();
+      _inventoryKey.currentState?.refresh();
     }
   }
 

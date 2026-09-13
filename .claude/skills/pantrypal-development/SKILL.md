@@ -549,23 +549,39 @@ if (confirmed == true) { /* 执行退出 */ }
 
 ### HomePage
 - 欢迎标题 + 库存总量（来自 PantryOverview）
-- 厨房概览 Wrap 网格（3 项 + 添加按钮）
+- 搜索栏（防抖 300ms + 搜索结果浮层，Stack + Positioned 实现；聚焦态 ih_accent 边框+阴影；Semantics label='搜索厨房物品'）
+- 厨房概览 Wrap 网格（_OverviewCard 独立 StatefulWidget，可点击跳转筛选）
+- 过期物品提醒横幅（expiredCount > 0 时显示，ripple-only，深红 #C0392B；Material+InkWell+Ink 三层结构）
 - 管理卡片（添加物品触发 AddItemModal，成功后刷新）
+- 常用物品列表（可点击，InkWell+Material；点击后搜索对应 PantryItem 并弹出 ItemActionSheet；支持过期拦截）
 - 推荐菜谱卡片（RecipeService.getSuggestions）
-- 使用统计气泡（MonthlyStats）
-- 常用物品排行（TopUsedItem）
-- Future.wait 并行加载 4 个接口 + RefreshIndicator
+- Future.wait 并行加载 3 个接口（overview + topUsed + suggestions；月度统计已移除）+ RefreshIndicator
+- State 类已公开为 `HomePageState`（可由 GlobalKey 访问）
+- 三个跨 Tab 回调：`onNavigateToInventory`、`onSwitchTab`、`onSwitchToInventoryWithSearch`
+- `refresh()` 公开方法：供外部（MainNavigation）在切换到 Tab 0 时触发刷新
+- `_loadData()` 加防重入（if _isLoading return），`_isLoading` 初始值为 false
+- 首页板块顺序：Header → 搜索栏 → 厨房概览 → 过期提醒 → 管理卡片 → 常用物品 → 推荐菜谱
+- 全局 GestureDetector（behavior: HitTestBehavior.translucent）捕获点击空白区域，关闭搜索浮层但不清空内容
 
 ### InventoryPage
-- 状态筛选 Chip（全部 / 新鲜 / 即将过期 / 已过期）
+- 顶部 Header：默认态（标题 + 搜索图标）/ 搜索模式（搜索框 + 取消按钮），AnimatedSwitcher + FadeTransition 切换（必须为两个子 Widget 赋予不同 key 才能触发动画）
+- 状态筛选 Chip（全部 / 新鲜 / 即将过期 / 已过期）；搜索提交时分类自动重置为"全部"，取消搜索时保留当前分类
 - 食材卡片点击弹出 ItemActionSheet（编辑 / 使用 / 删除，三项均已激活）
+- 过期拦截：edit/use 操作前，若 item.status == 'expired' 先弹 _showExpiredWarning() 确认，用户取消则放弃操作
 - 删除：ActionSheet 返回 'delete' 信号 → InventoryPage 弹确认对话框 → 调用删除 API
-- 使用：ActionSheet 返回 'use' 信号 → InventoryPage._showUseDialog → showDialog UseItemDialog（barrierDismissible: false）→ 成功后 _loadData()
-- 编辑：ActionSheet 返回 'edit' 信号 → InventoryPage._showEditModal → showModalBottomSheet EditItemModal
+- 使用：ActionSheet 返回 'use' 信号（过期拦截后）→ InventoryPage._showUseDialog → showDialog UseItemDialog
+- 编辑：ActionSheet 返回 'edit' 信号（过期拦截后）→ InventoryPage._showEditModal → showModalBottomSheet EditItemModal
 - Dismissible 已移除（迁移到 ActionSheet 删除流程）
-- 分页加载（PantryService.getItems + status 参数）
+- 搜索支持 keyword 参数（_searchKeyword 传入 PantryService.getItems）；键盘提交触发（非防抖），清除时保留分类，取消时保留分类
+- 分页加载（PantryService.getItems + status + keyword 参数）
 - 推荐菜谱卡片
 - RefreshIndicator
+- State 类已公开为 `InventoryPageState`（可由 GlobalKey 访问）
+- `refresh()` 公开方法：供外部在切换到 Tab 1 时触发刷新
+- `applyFilter(String? status)` 公开方法：切换筛选状态并刷新（由 HomePage 回调跳转时调用）
+- `applySearch(String keyword, {String? autoShowActionSheetForItem})` 公开方法：进入搜索模式、预填关键词、重置分类为"全部"并刷新，支持加载完成后通过 addPostFrameCallback 自动弹出指定物品的 ActionSheet
+- `_loadData()` 加防重入（if _isLoading return），`_isLoading` 初始值为 false
+- `dispose()` 中释放 `_searchController`
 
 ### StatsPage
 - PopupMenuButton 时间范围切换（7 天 / 30 天 / 90 天）
@@ -805,10 +821,380 @@ if (result == true && mounted) await _loadData();
 - SnackBar 文案：`'已使用 $qty ${item.unit} ${item.name}'`
 - Loading 期间取消按钮和确认按钮均禁用（防重复提交）
 
+## 跨 Tab 通信机制（MainNavigation）
+
+`MainNavigation` 通过 `GlobalKey` 持有子页面 State 的引用，实现 Tab 间的主动通信：
+
+```dart
+// navigation_wrapper.dart 核心结构
+final _homeKey = GlobalKey<HomePageState>();
+final _inventoryKey = GlobalKey<InventoryPageState>();
+
+// 切换 Tab 时主动刷新目标页
+void _onTabTapped(int index) {
+  if (index == 0) _homeKey.currentState?.refresh();
+  if (index == 1) _inventoryKey.currentState?.refresh();
+  setState(() => _currentIndex = index);
+}
+
+// 从任意来源跳转到 InventoryPage 并筛选
+void _switchToInventoryWithFilter(String? filter) {
+  setState(() => _currentIndex = 1);
+  _inventoryKey.currentState?.applyFilter(filter);
+}
+
+// 从任意来源跳转到 InventoryPage 并触发搜索（可选自动弹出 ActionSheet）
+void _switchToInventoryWithSearch(String keyword, {String? targetItemName}) {
+  setState(() => _currentIndex = 1);
+  _inventoryKey.currentState?.applySearch(
+    keyword,
+    autoShowActionSheetForItem: targetItemName,
+  );
+}
+```
+
+**注意事项**：
+- `_pages` 列表在 `initState` 中初始化（非 final 字段），因为需要在构造时传入 key
+- `GlobalKey.currentState` 可能为 null（Widget 未挂载时），始终用 `?.` 调用
+- `applySearch` 中 `autoShowActionSheetForItem` 逻辑依赖 `_loadData()` 完成后的 `_items` 列表，使用 async/await 顺序执行，await 后必须检查 mounted
+
+## 概览卡片点击态模式（_OverviewCard）
+
+每个概览卡片独立为 `StatefulWidget`，用 `onHighlightChanged` 驱动 `AnimatedScale` 缩放，而非 `onTap: null` 禁用 ripple。这样可以同时保留 ripple 水波纹和缩放动画。
+
+```dart
+class _OverviewCard extends StatefulWidget {
+  const _OverviewCard({
+    required this.label,
+    required this.count,
+    required this.cardColor,
+    required this.rippleColor,
+    required this.status,   // 语义锚点，筛选参数由 onTap 回调传入
+    required this.onTap,
+  });
+  // ...
+}
+
+class _OverviewCardState extends State<_OverviewCard> {
+  bool _isHighlighted = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedScale(
+      scale: _isHighlighted ? 0.95 : 1.0,
+      duration: _isHighlighted
+          ? const Duration(milliseconds: 100)
+          : const Duration(milliseconds: 150),
+      curve: _isHighlighted ? Curves.easeInOut : Curves.easeOut,
+      child: Material(
+        color: widget.cardColor,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onHighlightChanged: (highlighted) {
+            setState(() => _isHighlighted = highlighted);
+          },
+          onTap: widget.onTap,   // onTap 必须非 null，否则 ripple 不触发
+          // ...
+        ),
+      ),
+    );
+  }
+}
+```
+
+**关键点**：
+- `onTap` 不能为 null，否则 InkWell 不响应触摸，ripple 和 onHighlightChanged 均不触发
+- 每个卡片独立 State，多个卡片同时使用时不会共用 `_isHighlighted` 导致错误高亮
+- 按压时 `elevation` 从 1.5 降到 0.5，配合 AnimatedScale 提供立体按压感
+
+## 过期提醒横幅（ExpiredAlertCard 模式）
+
+横幅设计要点：仅 ripple，无缩放；数量上限 99+；深红色 #C0392B（主题暂无 token，直接硬编码）。
+
+```dart
+Widget _buildExpiredAlert() {
+  final expiredCount = _overview?.expiredCount ?? 0;
+  if (expiredCount <= 0) return const SizedBox.shrink();
+
+  final countLabel = expiredCount >= 100 ? '99+' : '$expiredCount';
+  const deepRed = Color(0xFFC0392B); // 设计稿指定，不使用 ih_negative（对比度更高）
+
+  return Padding(
+    padding: const EdgeInsets.only(top: 12),
+    child: Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: () => widget.onNavigateToInventory?.call('expired'),
+        borderRadius: BorderRadius.circular(16),
+        splashColor: AppTheme.currentColors.ih_negative.withValues(alpha: 0.12),
+        highlightColor: AppTheme.currentColors.ih_negative.withValues(alpha: 0.06),
+        child: Ink(   // 必须用 Ink 包裹背景 decoration，否则 ripple 会覆盖背景
+          decoration: BoxDecoration(
+            color: AppTheme.currentColors.ih_negative.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppTheme.currentColors.ih_negative.withValues(alpha: 0.30),
+              width: 1,
+            ),
+          ),
+          child: Padding(/* ... */),
+        ),
+      ),
+    ),
+  );
+}
+```
+
+**关键点**：
+- `Material + InkWell + Ink` 三层结构：Material 提供 ripple 绘制层，InkWell 捕获触摸，Ink 保留背景色（否则按压时背景色被 ripple 覆盖消失）
+- 数量上限：`expiredCount >= 100 ? '99+' : '$expiredCount'`（设计规范，超过 99 时不显示真实数字）
+- 横幅采用 ih_negative 色系（非 deepRed），只有数字/图标/箭头使用 deepRed，正文使用 ih_text
+
+## 首页搜索防抖 + 竞态保护模式
+
+```dart
+// 状态变量
+final TextEditingController _searchController = TextEditingController();
+final FocusNode _searchFocusNode = FocusNode();
+List<PantryItem> _searchResults = [];
+bool _isSearchLoading = false;
+bool _isSearching = false;      // 控制浮层显示
+String _searchKeyword = '';     // 已生效的关键词（用于高亮）
+bool _isSearchFocused = false;  // 控制边框/图标颜色
+Timer? _debounceTimer;
+
+void _onSearchChanged(String keyword) {
+  _debounceTimer?.cancel();
+  if (keyword.isEmpty) {
+    setState(() {
+      _searchResults = [];
+      _isSearching = false;
+      _isSearchLoading = false;
+      _searchKeyword = '';
+    });
+    return;
+  }
+  // 立即进入加载态，给用户即时反馈
+  setState(() {
+    _isSearchLoading = true;
+    _isSearching = true;
+  });
+  _debounceTimer = Timer(const Duration(milliseconds: 300), () async {
+    try {
+      final paged = await _pantryService.getItems(keyword: keyword, pageSize: 50);
+      if (!mounted) return;
+      // 竞态保护：关键词与当前输入不一致则丢弃结果
+      if (keyword != _searchController.text) return;
+      setState(() {
+        _searchKeyword = keyword;
+        _searchResults = paged.items;
+        _isSearchLoading = false;
+      });
+    } catch (_) {
+      // 搜索异常优雅降级，不影响主页正常使用
+      if (!mounted) return;
+      setState(() {
+        _searchResults = [];
+        _isSearchLoading = false;
+      });
+    }
+  });
+}
+```
+
+**关键点**：
+- 竞态保护：`if (keyword != _searchController.text) return;` 丢弃过期响应
+- 键盘搜索键（TextInputAction.search）提交后只收起键盘，不清空浮层（S-2b 设计决策）：`onSubmitted: (_) => _searchFocusNode.unfocus();`
+- 再次聚焦时若有缓存结果直接显示浮层，无需重新请求（在 FocusNode listener 中判断）
+- 点击浮层外区域：通过 GestureDetector(behavior: HitTestBehavior.translucent) 捕获，隐藏浮层但保留内容
+- `dispose()` 中必须同时释放：`_searchController.dispose()`, `_searchFocusNode.dispose()`, `_debounceTimer?.cancel()`
+
+## 搜索结果浮层定位模式（Stack + Positioned）
+
+将搜索框和浮层放在同一个局部 Stack 中，浮层相对于搜索框底边精准定位，避免硬编码页面级偏移量。
+
+```dart
+Stack(
+  clipBehavior: Clip.none,  // 允许浮层溢出 Stack 边界
+  children: [
+    _buildSearchBar(),       // 搜索框（高度固定 48pt）
+    if (_isSearching || _isSearchLoading)
+      Positioned(
+        top: 48 + 4,         // 搜索框高度 + 间距
+        left: 0,
+        right: 0,
+        child: _buildSearchResults(),
+      ),
+  ],
+)
+```
+
+**关键点**：
+- `clipBehavior: Clip.none` 必须设置，否则浮层超出 Stack 边界会被裁剪
+- 浮层高度不固定，由内容自适应
+- 浮层容器使用 `boxShadow` 营造悬浮感
+
+## 关键词高亮文本（Text.rich + TextSpan）
+
+```dart
+Widget _buildHighlightedName(String name, String keyword) {
+  final normalStyle = GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: colors.ih_text);
+  final highlightStyle = GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: colors.ih_accent);
+
+  if (keyword.isEmpty) return Text(name, style: normalStyle, maxLines: 1, overflow: TextOverflow.ellipsis);
+
+  final lowerName = name.toLowerCase();
+  final lowerKeyword = keyword.toLowerCase();
+  final index = lowerName.indexOf(lowerKeyword);
+
+  if (index < 0) return Text(name, style: normalStyle, maxLines: 1, overflow: TextOverflow.ellipsis);
+
+  return Text.rich(
+    TextSpan(children: [
+      if (index > 0) TextSpan(text: name.substring(0, index), style: normalStyle),
+      TextSpan(text: name.substring(index, index + keyword.length), style: highlightStyle),
+      if (index + keyword.length < name.length)
+        TextSpan(text: name.substring(index + keyword.length), style: normalStyle),
+    ]),
+    maxLines: 1,
+    overflow: TextOverflow.ellipsis,
+  );
+}
+```
+
+**注意**：比较时使用 `toLowerCase()` 实现大小写不敏感匹配，但显示时用原始 `name` 保留原始大小写。
+
+## 厨房物品页搜索模式（AnimatedSwitcher 两态 Header）
+
+Header 使用 `AnimatedSwitcher` + `FadeTransition` 在默认态和搜索态之间切换，必须为两个子 Widget 赋予不同 `key` 才能触发动画。
+
+```dart
+Widget _buildHeader() {
+  return SizedBox(
+    height: 44,
+    child: AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200),
+      transitionBuilder: (child, animation) =>
+          FadeTransition(opacity: animation, child: child),
+      child: _isSearchMode
+          ? _buildSearchModeHeader(key: const ValueKey('search'))
+          : _buildDefaultHeader(key: const ValueKey('default')),
+    ),
+  );
+}
+```
+
+搜索模式行为规则：
+- 搜索框以 `autofocus: true` 自动唤起键盘
+- 键盘搜索键提交（`onSubmitted`）：强制将 `_selectedStatus = null`（切换到"全部"），调用 `_loadData()`（非防抖，直接触发）
+- 清除按钮（X）：仅清空关键词，保留当前分类，调用 `_loadData()` 显示当前筛选的全量数据
+- 取消按钮：退出搜索模式，清空关键词，**保留**当前分类 `_selectedStatus`，调用 `_loadData()`
+
+## 过期物品操作拦截模式
+
+在 `_showActionSheet()` 返回值处理中，对 edit/use 动作增加过期状态拦截：
+
+```dart
+Future<void> _showActionSheet(PantryItem item) async {
+  final action = await showModalBottomSheet<String>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (_) => ItemActionSheet(item: item),
+  );
+
+  if (!mounted) return;
+
+  if (action == 'edit') {
+    if (item.status == 'expired') {           // 过期拦截
+      final confirmed = await _showExpiredWarning(item, 'edit');
+      if (!mounted) return;
+      if (!confirmed) return;                 // 用户取消则放弃
+    }
+    await _showEditModal(item);
+  } else if (action == 'use') {
+    if (item.status == 'expired') {           // 过期拦截
+      final confirmed = await _showExpiredWarning(item, 'use');
+      if (!mounted) return;
+      if (!confirmed) return;
+    }
+    await _showUseDialog(item);
+  } else if (action == 'delete') {
+    await _confirmAndDelete(item);            // 删除不拦截
+  }
+}
+
+Future<bool> _showExpiredWarning(PantryItem item, String action) async {
+  final actionLabel = action == 'edit' ? '编辑' : '使用';
+  final dateStr = DateFormat('yyyy-MM-dd').format(item.expirationDate);
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('物品已过期'),
+      content: Text('「${item.name}」已于 $dateStr 过期，确认继续$actionLabel？'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: Text('继续$actionLabel', style: const TextStyle(color: Color(0xFFE57373))),
+        ),
+      ],
+    ),
+  );
+  return confirmed == true;
+}
+```
+
+**注意**：每次 `await showDialog` 后都必须检查 `mounted`。
+
+## applySearch 与 addPostFrameCallback 延迟弹窗模式
+
+从外部（如首页搜索结果跳转）调用 `applySearch` 后，列表数据在 `_loadData()` 完成时写入 `_items`，但 Widget 树尚未重建完成，此时直接调用 `_showActionSheet` 可能找不到正确的 context。使用 `addPostFrameCallback` 延迟到帧渲染完成后再弹窗：
+
+```dart
+Future<void> applySearch(String keyword, {String? autoShowActionSheetForItem}) async {
+  setState(() {
+    _isSearchMode = true;
+    _searchKeyword = keyword;
+    _selectedStatus = null;
+  });
+  _searchController.text = keyword;
+  await _loadData();
+  if (!mounted) return;
+  if (autoShowActionSheetForItem != null) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final match = _items.cast<PantryItem?>().firstWhere(
+        (item) => item?.name == autoShowActionSheetForItem,
+        orElse: () => null,
+      );
+      if (match != null) {
+        await _showActionSheet(match);
+      }
+    });
+  }
+}
+```
+
 ## 更新记录
 
 | 日期 | 内容 |
 |------|------|
+| 2026-06-25 | UPDATE: home.dart — 移除月度统计板块（_buildUsageStats/_buildStatBubble/_monthlyStats），Future.wait 从 4 个减为 3 个接口；首页板块重排（常用物品移到推荐菜谱上方）；HomePageState 新增 dispose() 释放搜索资源 |
+| 2026-06-25 | ADD: home.dart — 搜索防抖 + 竞态保护（_onSearchChanged，300ms Timer，keyword != controller.text 时丢弃结果）；FocusNode listener 实现再聚焦复用缓存；GestureDetector.translucent 关闭浮层但保留内容（S-2b） |
+| 2026-06-25 | ADD: home.dart — 常用物品点击操作（_onTopItemTapped：PantryService.getItems 搜索匹配 → ItemActionSheet；_showActionSheet/_showEditModal/_showUseDialog/_confirmAndDelete 均已实现，含过期拦截） |
+| 2026-06-25 | ADD: home.dart — "查看全部"按钮触发 onSwitchTab(1) 跳转厨房物品页 |
+| 2026-06-25 | UPDATE: inventory.dart — InventoryPageState 公开（去掉 _），新增 refresh()/applyFilter()/applySearch() 三个公开方法；新增 _enterSearchMode/_exitSearchMode/_clearSearch/_onSearchSubmitted 四个内部方法 |
+| 2026-06-25 | ADD: inventory.dart — _showExpiredWarning(item, action) 方法；_showActionSheet() 在 edit/use 分支新增过期拦截逻辑；使用 intl.DateFormat 格式化过期日期 |
+| 2026-06-25 | UPDATE: inventory.dart — _buildHeader() 改用 AnimatedSwitcher + FadeTransition 两态切换（ValueKey 'default'/'search'），搜索模式 TextField autofocus + onSubmitted 触发搜索 |
+| 2026-06-25 | UPDATE: navigation_wrapper.dart — _pages 改为 initState 中初始化（late final List）；新增 GlobalKey<HomePageState> 和 GlobalKey<InventoryPageState>；Tab 切换时主动调用 refresh()；AddItemModal 成功后通过 GlobalKey 刷新两个页面（替换空 setState） |
+| 2026-06-25 | ADD: navigation_wrapper.dart — _switchToInventoryWithFilter(String? filter) 和 _switchToInventoryWithSearch(String keyword, {String? targetItemName}) 两个跨 Tab 通信方法 |
+| 2026-05-28 | FIX: inventory.dart applySearch 改为 async/await 模式，消除 fire-and-forget；applyFilter 和 refresh 改为 Future<void>；_loadData 加防重入（if _isLoading return），_isLoading 初始值改为 false |
+| 2026-05-28 | FIX: home.dart refresh 改为 Future<void>；_loadData 加防重入，_isLoading 初始值改为 false |
+| 2026-05-28 | FIX: navigation_wrapper.dart _showAddModal 结果处理改为通过 GlobalKey 主动调用 refresh()，替换无效的空 setState |
+| 2026-05-28 | UPDATE: HomePageState 公开化（去掉 _ 前缀），新增 refresh() 公开方法；HomePage 构造函数新增三个跨 Tab 回调参数 |
+| 2026-05-28 | UPDATE: InventoryPageState 公开化，新增 refresh()、applyFilter()、applySearch() 三个公开方法 |
+| 2026-05-28 | UPDATE: MainNavigation 新增 GlobalKey<HomePageState> 和 GlobalKey<InventoryPageState>，_pages 改为 initState 中初始化；Tab 切换时主动刷新目标页；新增 _switchToInventoryWithFilter 和 _switchToInventoryWithSearch 跨 Tab 通信方法 |
 | 2026-05-27 | ADD: 新增 lib/models/usage_log.dart（UsageLog 数据模型，item_id 可为 null） |
 | 2026-05-27 | ADD: PantryService 新增 useItem() 和 getUsageLogs() 两个方法，对接使用食材与查询使用记录接口 |
 | 2026-05-27 | UPDATE: ItemActionSheet "使用"项从 SnackBar 占位升级为激活状态：图标色改为 ih_accent，文字色改为 ih_text，添加副文字"记录消耗"，点击返回 'use' 信号；InventoryPage._showActionSheet 新增 'use' 分支，调用 _showUseDialog 弹出 UseItemDialog |
