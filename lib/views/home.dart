@@ -50,14 +50,19 @@ class HomePageState extends State<HomePage> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   List<PantryItem> _searchResults = [];
+
   /// 是否正在执行搜索请求（显示加载进度条）
   bool _isSearchLoading = false;
+
   /// 是否显示搜索浮层（有关键词输入时为 true）
   bool _isSearching = false;
+
   /// 当前搜索关键词（与实际发起请求时的关键词一致，用于高亮匹配文字）
   String _searchKeyword = '';
+
   /// 搜索框是否聚焦（控制边框/图标颜色）
   bool _isSearchFocused = false;
+
   /// 防抖 Timer
   Timer? _debounceTimer;
 
@@ -325,16 +330,10 @@ class HomePageState extends State<HomePage> {
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const SizedBox(width: 12),
-            // 搜索图标：聚焦态变橙
-            Icon(
-              Icons.search_rounded,
-              size: 20,
-              color: isFocused ? colors.ih_accent : colors.ih_text_muted,
-            ),
-            const SizedBox(width: 8),
             // 搜索输入框
+            const SizedBox(width: 8),
             Expanded(
               child: TextField(
                 controller: _searchController,
@@ -352,8 +351,43 @@ class HomePageState extends State<HomePage> {
                     color: colors.ih_text_muted,
                   ),
                   border: InputBorder.none,
+                  errorBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  filled: false,
                   contentPadding: EdgeInsets.zero,
                   isDense: true,
+                  prefixIcon: Icon(
+                    Icons.search_rounded,
+                    size: 20,
+                    color: isFocused ? colors.ih_accent : colors.ih_text_muted,
+                  ),
+                  suffix: hasText
+                      ? Semantics(
+                          label: '清除搜索内容',
+                          button: true,
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(22),
+                              onTap: () {
+                                _searchController.clear();
+                                _onSearchChanged('');
+                                // 保留聚焦状态，让用户可直接继续输入新关键词
+                              },
+                              child: const Padding(
+                                padding: EdgeInsets.all(
+                                    13), // 图标 18pt + padding 13×2 = 44pt touch target
+                                child: Icon(
+                                  Icons.close_rounded,
+                                  size: 18,
+                                  color: Color(0xFF9A9A9A), // ih_text_muted
+                                ),
+                              ),
+                            ),
+                          ),
+                        )
+                      : const SizedBox(width: 12),
                 ),
                 keyboardType: TextInputType.text,
                 textInputAction: TextInputAction.search,
@@ -365,33 +399,6 @@ class HomePageState extends State<HomePage> {
                 },
               ),
             ),
-            // 清除按钮：有输入内容时显示（44×44pt 点击区域，圆形 Ripple）
-            if (hasText) ...[
-              Semantics(
-                label: '清除搜索内容',
-                button: true,
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(22),
-                    onTap: () {
-                      _searchController.clear();
-                      _onSearchChanged('');
-                      // 保留聚焦状态，让用户可直接继续输入新关键词
-                    },
-                    child: const Padding(
-                      padding: EdgeInsets.all(13), // 图标 18pt + padding 13×2 = 44pt touch target
-                      child: Icon(
-                        Icons.close_rounded,
-                        size: 18,
-                        color: Color(0xFF9A9A9A), // ih_text_muted
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ] else
-              const SizedBox(width: 12),
           ],
         ),
       ),
@@ -424,16 +431,17 @@ class HomePageState extends State<HomePage> {
         clipBehavior: Clip.antiAlias,
         child: LinearProgressIndicator(
           minHeight: 3,
-          valueColor:
-              AlwaysStoppedAnimation<Color>(colors.ih_accent),
-          backgroundColor:
-              colors.ih_border,
+          valueColor: AlwaysStoppedAnimation<Color>(colors.ih_accent),
+          backgroundColor: colors.ih_border,
         ),
       );
     }
 
     // 空结果态（有关键词但无匹配）
-    if (!_isSearchLoading && _isSearching && _searchResults.isEmpty && keyword.isNotEmpty) {
+    if (!_isSearchLoading &&
+        _isSearching &&
+        _searchResults.isEmpty &&
+        keyword.isNotEmpty) {
       return Semantics(
         label: '没有找到与"$keyword"相关的物品',
         child: Container(
@@ -525,8 +533,7 @@ class HomePageState extends State<HomePage> {
                 _buildSearchResultItem(item, keyword, isLast && hasMore),
                 if (showDivider)
                   Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Divider(
                       height: 0.5,
                       thickness: 0.5,
@@ -620,7 +627,8 @@ class HomePageState extends State<HomePage> {
     );
 
     if (keyword.isEmpty) {
-      return Text(name, style: normalStyle, maxLines: 1, overflow: TextOverflow.ellipsis);
+      return Text(name,
+          style: normalStyle, maxLines: 1, overflow: TextOverflow.ellipsis);
     }
 
     final lowerName = name.toLowerCase();
@@ -628,15 +636,15 @@ class HomePageState extends State<HomePage> {
     final index = lowerName.indexOf(lowerKeyword);
 
     if (index < 0) {
-      return Text(name, style: normalStyle, maxLines: 1, overflow: TextOverflow.ellipsis);
+      return Text(name,
+          style: normalStyle, maxLines: 1, overflow: TextOverflow.ellipsis);
     }
 
     return Text.rich(
       TextSpan(
         children: [
           if (index > 0)
-            TextSpan(
-                text: name.substring(0, index), style: normalStyle),
+            TextSpan(text: name.substring(0, index), style: normalStyle),
           TextSpan(
             text: name.substring(index, index + keyword.length),
             style: highlightStyle,
@@ -665,14 +673,17 @@ class HomePageState extends State<HomePage> {
         bgColor = Colors.orange.shade50;
         textColor = Colors.orange.shade800;
         label = '即将过期';
+        break;
       case 'expired':
         bgColor = Colors.red.shade50;
         textColor = Colors.red.shade800;
         label = '已过期';
+        break;
       case 'used_up':
         bgColor = Colors.grey.shade100;
         textColor = Colors.grey.shade700;
         label = '已用完';
+        break;
       default:
         return const SizedBox.shrink();
     }
@@ -750,8 +761,7 @@ class HomePageState extends State<HomePage> {
   }
 
   Widget _buildHeader() {
-    final userName =
-        AuthNotifier.instance.currentUser?.name ?? 'Welcome to';
+    final userName = AuthNotifier.instance.currentUser?.name ?? 'Welcome to';
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -852,19 +862,24 @@ class HomePageState extends State<HomePage> {
           child: InkWell(
             onTap: () => widget.onNavigateToInventory?.call('expired'),
             borderRadius: BorderRadius.circular(16),
-            splashColor: AppTheme.currentColors.ih_negative.withValues(alpha: 0.12),
-            highlightColor: AppTheme.currentColors.ih_negative.withValues(alpha: 0.06),
+            splashColor:
+                AppTheme.currentColors.ih_negative.withValues(alpha: 0.12),
+            highlightColor:
+                AppTheme.currentColors.ih_negative.withValues(alpha: 0.06),
             child: Ink(
               decoration: BoxDecoration(
-                color: AppTheme.currentColors.ih_negative.withValues(alpha: 0.06),
+                color:
+                    AppTheme.currentColors.ih_negative.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: AppTheme.currentColors.ih_negative.withValues(alpha: 0.30),
+                  color: AppTheme.currentColors.ih_negative
+                      .withValues(alpha: 0.30),
                   width: 1,
                 ),
               ),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -1010,9 +1025,8 @@ class HomePageState extends State<HomePage> {
       ];
     }
     return _suggestions.map((s) {
-      final subtitle = s.missingItemsCount == 0
-          ? '食材齐全'
-          : '还需要 ${s.missingItemsCount} 种食材';
+      final subtitle =
+          s.missingItemsCount == 0 ? '食材齐全' : '还需要 ${s.missingItemsCount} 种食材';
       return Padding(
         padding: const EdgeInsets.only(bottom: 12),
         child: _buildRecipeCardStatic(s.title, subtitle),
@@ -1115,8 +1129,7 @@ class HomePageState extends State<HomePage> {
         child: InkWell(
           onTap: () => _onTopItemTapped(topItem),
           borderRadius: BorderRadius.circular(12),
-          splashColor:
-              AppTheme.currentColors.ih_accent.withValues(alpha: 0.08),
+          splashColor: AppTheme.currentColors.ih_accent.withValues(alpha: 0.08),
           highlightColor: AppTheme.currentColors.ih_surface_warm,
           child: Padding(
             padding: const EdgeInsets.all(12),
@@ -1146,7 +1159,8 @@ class HomePageState extends State<HomePage> {
   Future<void> _onTopItemTapped(TopUsedItem topItem) async {
     PaginatedData<PantryItem> paged;
     try {
-      paged = await _pantryService.getItems(keyword: topItem.name, pageSize: 50);
+      paged =
+          await _pantryService.getItems(keyword: topItem.name, pageSize: 50);
     } on UnauthorizedException {
       if (!mounted) return;
       await AuthNotifier.instance.clearAuth();
